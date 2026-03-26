@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # system root directory where printer_n_data folders are created and LNLOS repo is cloned
 
@@ -73,12 +74,30 @@ process_solo_directory()
         # Transfer all contents from LNL3dOS to config
         report_status "Transferring files from $SOURCE_DIR to $CONFIG_DIR..., printer data dir basename is $PRINTER_DATA_SUBDIR"
 
+        # Back up user-calibrated files before copy
+        if [ -f "$CONFIG_DIR/printer.cfg" ]; then
+            cp "$CONFIG_DIR/printer.cfg" "$CONFIG_DIR/printer.cfg.bak"
+        fi
+        if [ -f "$CONFIG_DIR/variables.cfg" ]; then
+            cp "$CONFIG_DIR/variables.cfg" "$CONFIG_DIR/variables.cfg.bak"
+        fi
+
         sudo cp -r "$SOURCE_DIR"/* "$CONFIG_DIR"
-        
+
+        # Restore user-calibrated files
+        if [ -f "$CONFIG_DIR/printer.cfg.bak" ]; then
+            mv "$CONFIG_DIR/printer.cfg.bak" "$CONFIG_DIR/printer.cfg"
+        fi
+        if [ -f "$CONFIG_DIR/variables.cfg.bak" ]; then
+            mv "$CONFIG_DIR/variables.cfg.bak" "$CONFIG_DIR/variables.cfg"
+        fi
+
+        sudo chown -R biqu:biqu "$CONFIG_DIR"
+
         report_status "File transfer complete."
 
         # Extract the subdirectory name (e.g., "printer_1_data")
-        printer_data_dir_name=$(basename "$printer_data_dir")
+        printer_data_dir_name=$(basename "$PRINTER_DATA_DIR")
         report_status "Working on subdirectory: $CONFIG_DIR"
 
         # Locate the virtual sd card target file within the current target directory
@@ -107,7 +126,7 @@ process_solo_directory()
 
         # set moonraker install path value for the update manager
         moonraker_update_manager_path_value="path: $PRINTER_DATA_DIR/LNL3dOS"
-        report_status "moonraker update manager path value to be set to: $moonraker_update_manager_path"
+        report_status "moonraker update manager path value to be set to: $moonraker_update_manager_path_value"
 
         # set installer path for LNLOS shell command
         shell_macro_target_file_path="$SCRIPTS_DIR/$SHELL_MACRO_TARGET_FILE"
@@ -138,7 +157,7 @@ process_solo_directory()
         elif [ "$PRINTER_DATA_SUBDIR" = "printer_3_data" ]; then
             mcu_serial_path="$MCU_SERIAL_PREFIX$PRINTER_3_MCU_SERIAL_PATH"
         else
-            mcu_serial_path="serial: UNKOWN SERIAL PATH"
+            mcu_serial_path="serial: UNKNOWN SERIAL PATH"
         fi
         report_status "set mcu serial path as $mcu_serial_path"
 

@@ -7,3 +7,6 @@
 
 #ignore vs-code codespace
 *.code-workspace
+
+#ignore machine-specific runtime state
+variables.cfg
