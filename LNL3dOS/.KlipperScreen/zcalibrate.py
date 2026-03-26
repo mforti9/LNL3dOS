@@ -7,12 +7,12 @@ from ks_includes.screen_panel import ScreenPanel
 
 
 class Panel(ScreenPanel):
+    widgets = {}
     distances = ['.01', '.05', '.1', '.5', '1', '5']
     distance = distances[-2]
 
     def __init__(self, screen, title):
         super().__init__(screen, title)
-        self.widgets = {}
         self.mesh_min = []
         self.mesh_max = []
         self.zero_ref = []
@@ -22,7 +22,7 @@ class Panel(ScreenPanel):
         if self.probe:
             self.x_offset = float(self.probe['x_offset']) if "x_offset" in self.probe else 0.0
             self.y_offset = float(self.probe['y_offset']) if "y_offset" in self.probe else 0.0
-            self.z_offset = float(self.probe.get('z_offset', 0))
+            self.z_offset = float(self.probe['z_offset'])
             if "sample_retract_dist" in self.probe:
                 self.z_hop = float(self.probe['sample_retract_dist'])
             if "speed" in self.probe:
@@ -126,9 +126,6 @@ class Panel(ScreenPanel):
             functions.append("delta_manual")
 
         self.labels['popover'].add(pobox)
-        if len(functions) == 0:
-            self.buttons['start'].set_sensitive(False)
-            return
         if len(functions) > 1:
             self.buttons['start'].connect("clicked", self.on_popover_clicked)
         else:
@@ -165,13 +162,11 @@ class Panel(ScreenPanel):
                 self._screen._ws.klippy.gcode_script("DELTA_CALIBRATE")
             elif method == "delta_manual":
                 self._screen._ws.klippy.gcode_script("DELTA_CALIBRATE METHOD=manual")
-            elif method == "e2zcalibrate":
-                self._screen._ws.klippy.gcode_script("CALIBRATE_Z_E2")
             elif method == "endstop":
                 self._screen._ws.klippy.gcode_script("Z_ENDSTOP_CALIBRATE")
 
     def _move_to_position(self, x, y):
-        if x is None or y is None:
+        if not x or not y:
             self._screen.show_popup_message(_("Error: Couldn't get a position to probe"))
             return
         logging.info(f"Lifting Z: {self.z_hop}mm {self.z_hop_speed}mm/s")
@@ -183,7 +178,7 @@ class Panel(ScreenPanel):
         if self.ks_printer_cfg is not None:
             x = self.ks_printer_cfg.getfloat("calibrate_x_position", None)
             y = self.ks_printer_cfg.getfloat("calibrate_y_position", None)
-            if x is not None and y is not None:
+            if x and y:
                 logging.debug(f"Using KS configured position: {x}, {y}")
                 return x, y
 

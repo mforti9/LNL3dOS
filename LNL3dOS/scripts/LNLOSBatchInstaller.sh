@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 # system root directory where printer_n_data folders are created and LNLOS repo is cloned
 SYS_ROOT_DIR="/home/biqu/"
@@ -13,12 +12,6 @@ PRINTER_DATA_EXCLUSION_PATTERN="kiauh-backups"
 SD_CARD_TARGET_FILE="paths.cfg"
 PRINTER_CFG_TARGET_FILE="printer.cfg"
 MOONRAKER_TARGET_FILE="moonraker.conf"
-SHELL_MACRO_TARGET_FILE="shellmacros.cfg"
-
-#moonraker LNLOS UpdatePath
-MOONRAKER_UPDATE_MANAGER_PATH_PATTERN="path: {LNLOS_INSTALL_PATH}"
-#shell macro path
-LNLOS_SHELL_MACRO_INSTALLER_PATTERN="command: /home/biqu/{printer_data_subdir}/LNL3dOS/LNL3dOS/scripts/LNLOSSoloInstaller.sh"
 
 # search queries for lines to be updated
 VIRTUAL_SD_CARD_SEARCH_PATTERN="path: ~/{printer_data_path}/gcodes"
@@ -78,26 +71,7 @@ process_lnlos_directories()
 
             # Copy all files from the source directory into the current target directory
             report_status "Copying files from $LNLOS_SRC_DIR to $printer_data_config_directory..."
-
-            # Back up user-calibrated files before copy
-            if [ -f "$printer_data_config_directory/printer.cfg" ]; then
-                cp "$printer_data_config_directory/printer.cfg" "$printer_data_config_directory/printer.cfg.bak"
-            fi
-            if [ -f "$printer_data_config_directory/variables.cfg" ]; then
-                cp "$printer_data_config_directory/variables.cfg" "$printer_data_config_directory/variables.cfg.bak"
-            fi
-
             sudo cp -r "$LNLOS_SRC_DIR"/* "$printer_data_config_directory"/
-
-            # Restore user-calibrated files
-            if [ -f "$printer_data_config_directory/printer.cfg.bak" ]; then
-                mv "$printer_data_config_directory/printer.cfg.bak" "$printer_data_config_directory/printer.cfg"
-            fi
-            if [ -f "$printer_data_config_directory/variables.cfg.bak" ]; then
-                mv "$printer_data_config_directory/variables.cfg.bak" "$printer_data_config_directory/variables.cfg"
-            fi
-
-            sudo chown -R biqu:biqu "$printer_data_config_directory"
 
             # Extract the subdirectory name (e.g., "printer_1_data")
             printer_data_dir_name=$(basename "$printer_data_dir")
@@ -148,7 +122,7 @@ process_lnlos_directories()
             elif [ "$printer_data_dir_name" = "printer_3_data" ]; then
                 mcu_serial_path="$MCU_SERIAL_PREFIX$PRINTER_3_MCU_SERIAL_PATH"
             else
-                mcu_serial_path="serial: UNKNOWN SERIAL PATH"
+                mcu_serial_path="serial: UNKOWN SERIAL PATH"
             fi
             report_status "set mcu serial path as $mcu_serial_path"
 
@@ -190,21 +164,6 @@ process_lnlos_directories()
                 report_status "Updated '$printer_cfg_file_path with new mcu serial path: $mcu_serial_path"
             else
                 report_status "Warning: '$PRINTER_CFG_TARGET_FILE' not found in $printer_data_config_directory"
-            fi
-
-            # update moonraker update manager path
-            if [[ -f "$moonraker_conf_file_path" ]]; then
-                moonraker_update_manager_path_value="path: $printer_data_dir/LNL3dOS"
-                sed -i "s|$MOONRAKER_UPDATE_MANAGER_PATH_PATTERN|$moonraker_update_manager_path_value|" "$moonraker_conf_file_path"
-                report_status "Updated '$moonraker_conf_file_path' LNLOS path entry with $moonraker_update_manager_path_value"
-            fi
-
-            # update shell macro installer path
-            shell_macro_target_file_path="$printer_data_config_directory/LNL3dOS/LNL3dOS/scripts/$SHELL_MACRO_TARGET_FILE"
-            if [[ -f "$shell_macro_target_file_path" ]]; then
-                lnlos_installer_path_value="command: /home/biqu/$printer_data_dir_name/LNL3dOS/LNL3dOS/scripts/LNLOSSoloInstaller.sh"
-                sed -i "s|$LNLOS_SHELL_MACRO_INSTALLER_PATTERN|$lnlos_installer_path_value|" "$shell_macro_target_file_path"
-                report_status "Updated $shell_macro_target_file_path with new shell command path: $lnlos_installer_path_value"
             fi
 
         # end sub directory processing
